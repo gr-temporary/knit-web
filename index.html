@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Index</title>
+</head>
+<body>
+
+	<script src="main.js"></script>
+	<script src="test.js"></script>
+	<script>
+		
+		console.log("Hello");
+
+		var runner = new Runner();
+		var test = new JsBridge();
+		runner.init();
+
+		var size = runner.getSize();
+		for(var i=0; i<size; i++) {
+			for(var j=0; j<size; j++) {
+				runner.setKernelDot(i, j, Math.abs(i - size / 2) > size / 4 ? 0 : 1);
+			}
+		}
+		console.time("I");
+		runner.next();
+		console.timeEnd("I");
+
+	var a = runner.getBest();
+	console.log(a);
+	</script>
+</body>
+</html>
