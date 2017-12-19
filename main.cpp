@@ -2,20 +2,57 @@
 // for all the browser APIs.
 #include <cheerp/client.h> 
 #include <cheerp/clientlib.h>
-#include <vector>
-#include <cmath>
+
+struct Point
+{
+	int x;
+	int y;
+};
 
 typedef int Chromosome;
-typedef std::vector<Chromosome> DNA;
-typedef std::pair<int, int> Point;
+typedef Chromosome *DNA;
 typedef float DATA;
 
 // for extra speed
 #define SIZE 200
+#define NAILS 200
+#define POPULATIONSIZE 50
+#define ELITE 5
+#define GENOMESIZE 2500
+#define IMAGESIZE SIZE
+#define ITERATIONS 20000
+#define MUTATIONSPREAD 0.01
+#define MUTATIONCOUNT 0.0015
+#define RINGDIAMETER 200
+#define THREADDIAMETER 0.05
+#define THREADOPACITY (SIZE * THREADDIAMETER / RINGDIAMETER)
 
 int iabs(int a) {
 	if(a < 0) return -a;
 	return a;
+}
+
+double cos(double x) {
+	return client::Math.cos(x);
+}
+
+double sin(double x) {
+	return client::Math.sin(x);
+}
+
+double sqrt(double x) {
+	return client::Math.sqrt(x);
+}
+
+double log(double x) {
+	return client::Math.log(x);
+}
+
+DATA min(DATA x, DATA y) {
+	if(x > y) {
+		return y;
+	}
+	return x;
 }
 
 int intRandom(int start = 0, int end = 255 * 255) {
@@ -31,7 +68,7 @@ double normalRandom()
 {
 	double u1 = uniformRandom();
 	double u2 = uniformRandom();
-	return cos(8.*atan(1.)*u2)*sqrt(-2.*log(u1));
+	return cos(8.*3.141592*u2)*sqrt(-2.*log(u1));
 }
 
 bool isPointInCircle(int x, int y, int r) {
@@ -40,24 +77,24 @@ bool isPointInCircle(int x, int y, int r) {
 	return (dx * 2 + 1) * (dx * 2 + 1) + (dy * 2 + 1) * (dy * 2 + 1) <= (r * 2 + 1) * (r * 2 + 1);
 }
 
-void makeHull(std::vector<Point> &bounds) {
-	bounds.resize(SIZE);
+void makeHull() {
+	bounds = new Point[SIZE];
 
 	for (int i = 0; i < SIZE; i++) {
 		bool wasInside = false;
 		for (int j = 0; j < SIZE; j++) {
 			bool isInside = isPointInCircle(j, i, SIZE / 2);
 			if (isInside && !wasInside) {
-				bounds[i].first = j;// == 0 ? 0 : j - 1;
+				bounds[i].x = j;// == 0 ? 0 : j - 1;
 				wasInside = true;
 			}
 			if (wasInside && !isInside) {
-				bounds[i].second = j;
+				bounds[i].y = j;
 				wasInside = false;
 			}
 		}
-		if (bounds[i].second == 0 && wasInside) {
-			bounds[i].second = SIZE - 1;
+		if (bounds[i].y == 0 && wasInside) {
+			bounds[i].y = SIZE - 1;
 		}
 	}
 }
@@ -84,7 +121,7 @@ struct Slab {
 		DATA mean = 0.0;
 		DATA dev = 0.0;
 		for (int i = 0; i < SIZE; i++) {
-			for (int j = bounds[i].first; j <= bounds[i].second; j++) {
+			for (int j = bounds[i].x; j <= bounds[i].y; j++) {
 				mean += data[j + i * SIZE];
 			}
 		}
@@ -92,7 +129,7 @@ struct Slab {
 
 		DATA d;
 		for (int i = 0; i < SIZE; i++) {
-			for (int j = bounds[i].first; j <= bounds[i].second; j++) {
+			for (int j = bounds[i].x; j <= bounds[i].y; j++) {
 				d = data[j + i * SIZE] - mean;
 				dev += d * d;
 			}
@@ -100,17 +137,17 @@ struct Slab {
 		dev = sqrt(dev);
 
 		for (int i = 0; i < SIZE; i++) {
-			for (int j = bounds[i].first; j <= bounds[i].second; j++) {
+			for (int j = bounds[i].x; j <= bounds[i].y; j++) {
 				data[j + i * SIZE] = (data[j + i * SIZE] - mean) / dev;
 			}
 		}
 	}
 
-	double covariate(const Slab *kernel) {
+	double covariate(const DATA *kernel) {
 		DATA result = 0.0;
 		for (int i = 0; i < SIZE; i++) {
-			for (int j = bounds[i].first; j <= bounds[i].second; j++) {
-				result += data[j + i * SIZE] * kernel->data[j + i * SIZE];
+			for (int j = bounds[i].x; j <= bounds[i].y; j++) {
+				result += data[j + i * SIZE] * kernel[j + i * SIZE];
 			}
 		}
 		return result;
@@ -122,61 +159,41 @@ struct Slab {
 
 	void clamp() {
 		for (int i = 0; i < SIZE; i++) {
-			for (int j = bounds[i].first; j <= bounds[i].second; j++) {
-				data[j + i * SIZE] = std::min(data[j + i * SIZE], (DATA)1.0);
+			for (int j = bounds[i].x; j <= bounds[i].y; j++) {
+				data[j + i * SIZE] = min(data[j + i * SIZE], (DATA)1.0);
 			}
-		}
-	}
-
-	void pow(DATA power) {
-		for (int i = 0; i < SIZE; i++) {
-			for (int j = bounds[i].first; j <= bounds[i].second; j++) {
-				data[j + i * SIZE] = std::pow(data[j + i * SIZE], power);
-			}
-		}
-	}
-
-	void scan() {
-		int j = SIZE / 2;
-		for (int i = 0; i < SIZE; i++) {
-			//client::console.log("%i:\t%.7lf\n", i, data[j * SIZE + i]);
 		}
 	}
 	
 	static int size;
-	static std::vector<Point> bounds;
 	static void prepare() {
-		bounds.resize(SIZE);
-		makeHull(bounds);
+		makeHull();
 		int l = 0;
 		for (int i = 0; i < SIZE; i++) {
-			l += bounds[i].second - bounds[i].first;
+			l += bounds[i].x - bounds[i].y;
 		}
 		size = l;
 	}
 };
 
 int Slab::size;
-std::vector<Point> Slab::bounds;
+Point *bounds;
 
 struct Genome {
 	DNA dna;
 	double fitness;
 	double weight;
 
-	void init(int size, int nails) {
-		dna.resize(size);
-		int minOffset = nails * 1 / 5;
-		int maxOffset = nails * 4 / 5;
-		dna[0] = intRandom() % nails;
-		for (int i = 1; i < size; i++) {
-			dna[i] = intRandom() % nails;    //(dna[i - 1] + intRandom(minOffset, maxOffset)) % nails;
+	void init() {
+		dna = new Chromosome[GENOMESIZE];
+		for (int i = 0; i < GENOMESIZE; i++) {
+			dna[i] = intRandom() % NAILS;    //(dna[i - 1] + intRandom(minOffset, maxOffset)) % nails;
 		}
 		fitness = 0.0;
 	}
 
 	void mutate(double count, double spread, int nails) {
-		for (int i = 0; i < dna.size(); i++) {
+		for (int i = 0; i < GENOMESIZE; i++) {
 			double x = uniformRandom();
 			if (x < count) {
 				x = normalRandom();
@@ -187,17 +204,8 @@ struct Genome {
 		}
 	}
 
-	void burst(float probability, int nails) {
-		for (int i = 0; i < dna.size(); i++) {
-			if (uniformRandom() < probability) {
-				int offset = floor(uniformRandom() * nails);
-				dna[i] = offset;
-			}
-		}
-	}
-
 	client::Int32Array *toArray() {
-		return cheerp::MakeTypedArray(&dna[0], dna.size());
+		return cheerp::MakeTypedArray(&dna[0], GENOMESIZE);
 	}
 
 	void draw(Slab *canvas, const Point *nails, const float threadOpacity) {
@@ -205,10 +213,10 @@ struct Genome {
 		DATA paint = threadOpacity;
 		int x0, x1, y0, y1, dx, dy, sx, sy, err;
 		for (int i = 0; i < dna.size() - 1; i++) {
-			x0 = nails[dna[i]].first;
-			x1 = nails[dna[i + 1]].first;
-			y0 = nails[dna[i]].second;
-			y1 = nails[dna[i + 1]].second;
+			x0 = nails[dna[i]].x;
+			x1 = nails[dna[i + 1]].x;
+			y0 = nails[dna[i]].y;
+			y1 = nails[dna[i + 1]].y;
 			dx = iabs(x1 - x0);
 			dy = iabs(y1 - y0);
 			sx = (x0 < x1) ? 1 : -1;
@@ -232,16 +240,35 @@ struct Genome {
 	}
 };
 
-typedef std::vector<Genome> Genomes;
+void swap(Genome *v, int left, int right) {
+	Genome t = v[left];
+	v[left] = v[right];
+	v[right] = t;
+}
+
+void qsort(Genome *v, int left, int right) {
+    int i, last;
+
+    if (left >= right)
+        return;
+    swap(v, left, (left + right) / 2);
+    last = left;
+    for (i = left+1; i <= right; i++)
+        if (v[i] < v[left] < 0) /* Here's the function call */
+            swap(v, ++last, i);
+    swap(v, left, last);
+    qsort(v, left, last-1, comp);
+    qsort(v, last+1, right, comp);
+}
 
 struct Population {
-	Genomes population;
+	Genome *population;
 	double weightSum;
 
 	void init(int populationSize, int genomeSize, int nails) {
-		population.resize(populationSize);
-		for (int i = 0; i < population.size(); i++) {
-			population[i].init(genomeSize, nails);
+		population = new Genome[POPULATIONSIZE];
+		for (int i = 0; i < POPULATIONSIZE; i++) {
+			population[i].init();
 		}
 	}
 
@@ -255,22 +282,22 @@ struct Population {
 			population[i].draw(canvas, nails, threadOpacity);
 			//canvases[this_thread].pow(0.75);
 			canvas->normalize();
-			double fitness = canvas->covariate(kernel);
+			double fitness = canvas->covariate(kernel->data);
 			population[i].fitness = fitness;
 			if (fitness > maxFitness) maxFitness = fitness;
 			if (fitness < minFitness) minFitness = fitness;
 			average += fitness;
 		}
-		std::sort(population.begin(), population.end());
+		qsort(population, 0, POPULATIONSIZE - 1);
 
 		weightSum = 0.0;
-		for (int i = 0; i < population.size(); i++) {
+		for (int i = 0; i < POPULATIONSIZE; i++) {
 			double weight = (population[i].fitness - minFitness) / (maxFitness - minFitness);
 			population[i].weight = weightSum;
 			weightSum += weight;
 		}
 		
-		return average / population.size();
+		return average / POPULATIONSIZE;
 	}
 
 	Genome* getParent() {
@@ -303,11 +330,8 @@ int getCrossoverJumpSize(int size) {
 }
 
 
-Genome crossover(Genome *mother, Genome *father) {
-	Genome child;
-	int size = mother->dna.size();
-
-	child.dna.resize(size);
+void crossover(Genome *mother, Genome *father, Genome *child) {
+	int size = GENOMESIZE;
 
 	const Genome *donor;
 	int i = 0;
@@ -315,7 +339,7 @@ Genome crossover(Genome *mother, Genome *father) {
 	int jump = getCrossoverJumpSize(size);
 	donor = uniformRandom() < 0.5 ? mother : father;
 	while (i < size) {
-		child.dna[i] = donor->dna[i];
+		child->dna[i] = donor->dna[i];
 		i++;
 		j++;
 		if (j == jump) {
@@ -324,21 +348,20 @@ Genome crossover(Genome *mother, Genome *father) {
 			donor = donor == father ? mother : father;
 		}
 	}
-	return child;
 }
 
 void generateNewPopulation(Population *base, Population *result, int nails, int elite, double mutationCount, double mutationSpread) {
-	for (int i = 0; i < elite && i < result->population.size(); i++) {
+	for (int i = 0; i < elite && i < POPULATIONSIZE; i++) {
 		result->population[i] = base->population[i];
 	}
-	int size = result->population.size();
+	int size = POPULATIONSIZE;
 	for (int i = elite; i < size; i++) {
 		// select 2 parents
 		Genome* mother = base->getParentOrdinal();
 		Genome* father = base->getParentOrdinal();
 
 		// crossover
-		result->population[i] = crossover(mother, father);
+		crossover(mother, father, &(result->population[i]));
 
 		// mutate
 		result->population[i].mutate(mutationCount, mutationSpread, nails);
