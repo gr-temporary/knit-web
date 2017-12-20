@@ -128,6 +128,7 @@ class Slab {
 class Genome {
 	constructor() {
 		this.dna = new Int32Array(genomeSize);
+		this.elite = false;
 		this.fitness = 0.0;
 		this.weight = 0.0;
 
@@ -164,10 +165,12 @@ class Population {
 
 	calculateFitness() {
 		for(let i=0; i<populationSize; i++) {
-			drawGenome(this.population[i], canvas);
-			canvas.normalize();
-			let fitness = canvas.covariate(kernel.data);
-			this.population[i].fitness = fitness;
+			if(!this.population[i].elite) {
+				drawGenome(this.population[i], canvas);
+				canvas.normalize();
+				let fitness = canvas.covariate(kernel.data);
+				this.population[i].fitness = fitness;
+			}
 		}
 		this.population.sort((a, b) => {
 			return b.fitness - a.fitness;
@@ -230,6 +233,7 @@ function crossover(mother, father, child) {
 			donor = donor == father ? mother : father;
 		}
 	}
+	child.elite = false;
 }
 
 function generateNewPopulation(base, result) {
@@ -237,6 +241,7 @@ function generateNewPopulation(base, result) {
 		for(let j=0; j<genomeSize; j++) {
 			result.population[i].dna[j] = base.population[i].dna[j];
 		}
+		result.population[i].elite = true;
 	}
 	let size = populationSize;
 	for (let i = eliteCount; i < size; i++) {

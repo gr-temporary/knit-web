@@ -6,10 +6,27 @@
 <body>
 	<canvas width="300" height="300" id="main-display"></canvas>
 	<pre id="info"></pre>
+	<button id="play-pause">Pause</button>
 	<script src="knit.js"></script>
 	<script>
 		
 		console.log("Hello");
+
+		var button = document.querySelector("#play-pause");
+		var paused = false;
+
+		button.addEventListener("click", playPause);
+
+		function playPause() {
+			if(paused) {
+				button.innerHTML = "Pause";
+				paused = false;
+				step();
+			} else {
+				button.innerHTML = "Play";
+				paused = true;
+			}
+		}
 
 		init();
 		for(let i=0; i<imageSize; i++) {
@@ -34,13 +51,15 @@
 		
 		function step() {
 			console.time("I");
-			for(let i=0; i<10; i++) {
+			for(let i=0; i<2; i++) {
 				iterate();
 			}
 			console.timeEnd("I");
 			draw();
 
-			setTimeout(step, 10);
+			if(!paused) {
+				setTimeout(step, 10);
+			}
 		}
 
 		function draw() {
@@ -62,15 +81,6 @@
 				ctx.lineTo(p.x, p.y);
 			}
 			ctx.stroke();
-
-			/*ctx.strokeStyle = "#f00";
-			ctx.beginPath();
-			ctx.moveTo(imageSize / 2, 0);
-			for(let i=0; i<imageSize; i++) {
-				ctx.lineTo(bounds[i * 2], i);
-				ctx.lineTo(bounds[i * 2 + 1], i);
-			}
-			ctx.stroke();*/
 		}
 	</script>
 </body>
