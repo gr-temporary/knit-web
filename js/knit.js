@@ -109,6 +109,21 @@ class Slab {
 		return result;
 	}
 
+	diff(kernel) {
+		let result = 0.0;
+		let data = this.data;
+		let size = imageSize;
+		let b = bounds;
+		let t = 0;
+		for (let i = 0; i < size; i++) {
+			for (let j = b[i * 2]; j <= b[i * 2 + 1]; j++) {
+				t = data[j + i * size] - kernel[j + i * size];
+				result += t * t;
+			}
+		}
+		return 1 / Math.sqrt(result);
+	}
+
 	addPixel(x, y, opacity) {
 		this.data[y * imageSize + x] += opacity;
 	}
