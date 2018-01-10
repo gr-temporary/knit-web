@@ -8,3 +8,24 @@ body {
 	padding: 0;
 	font-family: Arial;
 }
+
+.container {
+	max-width: 600px;
+	margin: 0 auto;
+	text-align: center;
+}
+
+.big-button {
+	font-size: 24px;
+}
+
+#image-container img {
+	max-width: 100%;
+}
+
+input[type="file"] {
+	/*opacity: 0;*/
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+}

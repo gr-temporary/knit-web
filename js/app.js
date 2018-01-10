@@ -1,71 +1,118 @@
 
-		var button = document.querySelector("#play-pause");
-		var paused = false;
+	function qs(selector) {
+		return document.querySelector(selector);
+	}
 
-		button.addEventListener("click", playPause);
+	var imageInput = qs("#image-input");
 
-		function playPause() {
-			if(paused) {
-				button.innerHTML = "Pause";
-				paused = false;
-				step();
-			} else {
-				button.innerHTML = "Play";
-				paused = true;
+	qs("#image-crop").style.display = "none";
+	qs("#select-image-button").addEventListener("click", function() {
+		imageInput.click();
+	});
+	imageInput.addEventListener("change", setupImage);
+
+	var cropper;
+
+	function setupImage(event) {
+		qs("#image-crop").style.display = "block";
+		if (imageInput.files && imageInput.files[0]) {
+			var reader = new FileReader();
+
+			reader.onload = function(e) {
+				cropper = new ICropper(
+					'image-container',    //Container id
+					{
+						ratio: 1,    //Set aspect ratio of the cropping area
+						image: e.target.result
+					}
+				);
+			}
+			reader.readAsDataURL(imageInput.files[0]);
+		}
+	}
+
+	qs("#start-button").addEventListener("click", start);
+
+	function start() {
+
+
+		var kernel = getKernel();
+
+		var worker = new Worker("js/knit.js");
+
+		let drawSettings;
+
+		worker.onerror = function(data) {
+			console.log(data);
+		}
+
+		worker.onmessage = function(data) {
+			if(data[0] == "result") {
+				draw(data[1], drawSettings);
+			} 
+
+			if(data[0] == "settings") {
+				drawSettings = data[1];
+				drawSettings.points = [];
+				let r = 300 / 2;
+				for(let i=0; i<drawSettings.nailCount; i++) {
+					drawSettings.points.push({
+						x: r + r * Math.cos(Math.PI * 2 * i / drawSettings.nailCount),
+						y: r + r * Math.sin(Math.PI * 2 * i / drawSettings.nailCount)
+					});
+				}
 			}
 		}
 
-		init();
-		for(let i=0; i<imageSize; i++) {
-			for(let j=0; j<imageSize; j++) {
-	 			kernel.data[i + j * imageSize] = Math.abs(i - imageSize / 2) > imageSize / 4 ? 0 : 1;
-			}
-		}
-		kernel.normalize();
+		worker.postMessage(["init", kernel]);
 
-		let drawPoints = [];
-		for(let i=0; i<nailCount; i++) {
-			let a = 3.14159265359 * 2 * i / nailCount;
-			let s = Math.sin(a);
-			let c = Math.cos(a);
-			let r = 300 / 2 - 1;
-			drawPoints[i] = {
-				x: (300 / 2 + c * r) | 0,
-				y: (300 / 2 + s * r) | 0
-			};
+		worker.postMessage(["step", 10]);
+	}
+
+	function getKernel() {
+		var WIDTH = 100;
+		var HEIGHT = 100;
+
+		var kernel = document.createElement("canvas");
+		kernel.width = WIDTH;
+		kernel.height = HEIGHT;
+
+		var kernelCtx = kernel.getContext("2d");
+
+		var img = qs("#image-container img");
+
+		var bounds = cropper.getInfo();
+		var scale = img.naturalWidth / bounds.cw;
+
+		kernelCtx.drawImage(img, bounds.l * scale, bounds.t * scale, bounds.w * scale, bounds.h * scale, 0, 0, WIDTH, HEIGHT);
+
+		var data = kernelCtx.getImageData(0, 0, WIDTH, HEIGHT).data;
+
+		var kernel = new Float64Array(WIDTH * HEIGHT);
+		for(var i=0; i<WIDTH * HEIGHT; i++) {
+			kernel[i] = (data[i * 4] + data[i * 4 + 1] + data[i * 4 + 2]) / 3;
 		}
-		step();
+
+		return kernel;
+	}
+
 		
-		function step() {
-			console.time("I");
-			for(let i=0; i<2; i++) {
-				iterate();
-			}
-			console.timeEnd("I");
-			draw();
+	function draw(genome, settings) {
+		let ctx = qs("canvas").getContext("2d");
+		ctx.fillStyle = "#fff";
+		ctx.fillRect(0, 0, 300, 300);
 
-			if(!paused) {
-				setTimeout(step, 10);
-			}
+		let g = genome;
+		let info = qs("#info");
+		let points = settings.points;
+
+		ctx.strokeStyle = "rgba(0,0,0," + (300 * settings.threadDiameter / settings.ringDiameter) + ")";
+		ctx.beginPath();
+		let p = points[g[0]];
+		ctx.moveTo(p.x, p.y);
+		for(let i=1; i<g.length; i++) {
+			p = points[g[i]];
+			ctx.lineTo(p.x, p.y);
 		}
-
-		function draw() {
-			let ctx = document.querySelector("canvas").getContext("2d");
-			ctx.fillStyle = "#fff";
-			ctx.fillRect(0, 0, 300, 300);
-
-			let g = getBest();
-			let info = document.querySelector("#info");
-			info.innerHTML = generation + " : " + populations[lastPopulation].population[0].fitness + " -- " + populations[lastPopulation].population[populationSize - 1].fitness;
-			//console.log(populations[next].population[0].fitness, populations[next].population[populationSize - 1].fitness);
-
-			ctx.strokeStyle = "rgba(0,0,0," + (300 * threadDiameter / ringDiameter) + ")";
-			ctx.beginPath();
-			let p = drawPoints[g[0]];
-			ctx.moveTo(p.x, p.y);
-			for(let i=1; i<g.length; i++) {
-				p = drawPoints[g[i]];
-				ctx.lineTo(p.x, p.y);
-			}
-			ctx.stroke();
-		}
+		ctx.stroke();
+	}

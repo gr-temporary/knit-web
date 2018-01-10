@@ -24,6 +24,27 @@ let populations = [];
 let generation = 0;
 let lastPopulation = 0;
 
+onmessage = function(data) {
+	if(data[0] == "init") {
+		init();
+		kernel.copyFrom(data[1]);
+		kernel.normalize();
+
+		postMessage(["settings", {
+			nailCount: nailCount,
+			ringDiameter: ringDiameter,
+			threadDiameter: threadDiameter
+		}]);
+	}
+
+	if(data[0] == "step") {
+		for(let i=0; i<data[1]; i++) {
+			iterate();
+		}
+		postMessage(["result", getBest()]);
+	}
+}
+
 function init() {
 	makeHull();
 	makePoints();
@@ -136,6 +157,12 @@ class Slab {
 			for (let j = b[i * 2]; j <= b[i * 2 + 1]; j++) {
 				data[j + i * size] = Math.min(data[j + i * size], 1.0);
 			}
+		}
+	}
+
+	copyFrom(data) {
+		for(let i=0; i<this.data.length && i < data.length; i++) {
+			this.data[i] = data[i];
 		}
 	}
 }
