@@ -24,7 +24,10 @@ let populations = [];
 let generation = 0;
 let lastPopulation = 0;
 
+console.log("Heyo");
+
 onmessage = function(data) {
+	data = data.data;
 	if(data[0] == "init") {
 		init();
 		kernel.copyFrom(data[1]);

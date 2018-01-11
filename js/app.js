@@ -1,4 +1,11 @@
 
+var app = new Vue({
+  el: '#app',
+  data: {
+    state: 'begin'
+  }
+});
+
 	function qs(selector) {
 		return document.querySelector(selector);
 	}
@@ -6,15 +13,20 @@
 	var imageInput = qs("#image-input");
 
 	qs("#image-crop").style.display = "none";
-	qs("#select-image-button").addEventListener("click", function() {
-		imageInput.click();
-	});
+	qs("#select-image-button").addEventListener("click", chooseImage);
+	qs("#select-another-image-button").addEventListener("click", chooseImage);
 	imageInput.addEventListener("change", setupImage);
 
 	var cropper;
 
+	function chooseImage() {
+		imageInput.click();
+	}
+
 	function setupImage(event) {
 		qs("#image-crop").style.display = "block";
+		qs("#image-selection").style.display = "none";
+
 		if (imageInput.files && imageInput.files[0]) {
 			var reader = new FileReader();
 
@@ -34,7 +46,7 @@
 	qs("#start-button").addEventListener("click", start);
 
 	function start() {
-
+		qs("#image-crop").style.display = "none";
 
 		var kernel = getKernel();
 
@@ -47,6 +59,8 @@
 		}
 
 		worker.onmessage = function(data) {
+			data = data.data;
+
 			if(data[0] == "result") {
 				draw(data[1], drawSettings);
 			} 
