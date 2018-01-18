@@ -8,18 +8,18 @@
 </head>
 <body>
 	<div class="container" id="app">
-		<input type="file" id="image-input" accept="image/*">
+		<input type="file" id="image-input" accept="image/*" ref="fileInput" @change="setupImage">
 		<div id="image-selection" v-if="state == 'begin'">
-			<button id="select-image-button" class="big-button">Выберите изображение</button>
+			<button id="select-image-button" class="big-button" @click="selectImage">Выберите изображение</button>
 		</div>
 		<div id="image-crop" v-if="state == 'select'">
 			<div id="image-container"></div>
-			<button id="select-another-image-button" class="big-button">Выбрать другое</button> <button id="start-button" class="big-button">Поехали</button>
+			<button id="select-another-image-button" class="big-button" @click="selectImage">Выбрать другое</button> <button id="start-button" class="big-button" @click="run">Поехали</button>
 		</div>
 		<div class="process" v-if="state == 'run'">
-			<canvas width="300" height="300" id="main-display"></canvas>
-			<pre id="info"></pre>
-			<button id="play-pause" class="big-button">Пауза</button>
+			<canvas width="300" height="300" ref="canvas"></canvas>
+			<pre ref="info"></pre>
+			<button id="play-pause" class="big-button" @click="pause"><template v-if="!paused">Пауза</template><template v-if="paused">Продолжить</template></button>
 		</div>
 	</div>
 	

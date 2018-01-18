@@ -24,6 +24,8 @@ let populations = [];
 let generation = 0;
 let lastPopulation = 0;
 
+let needToStop = false;
+
 console.log("Heyo");
 
 onmessage = function(data) {
@@ -44,8 +46,31 @@ onmessage = function(data) {
 		for(let i=0; i<data[1]; i++) {
 			iterate();
 		}
-		postMessage(["result", getBest()]);
+		postMessage(["result", getBest(), generation]);
 	}
+
+	if(data[0] == "run") {
+		needToStop = false;
+		run(data[1]);
+	}
+
+	if(data[0] == "pause") {
+		needToStop = true;
+	}
+}
+
+function run(step) {
+	if(needToStop) {
+		return;
+	}
+	step = step || (Math.random() * 20 + 1) | 0; 
+	for(let i=0; i<step; i++) {
+		iterate();
+	}
+	postMessage(["result", getBest(), generation]);
+	setTimeout(function() {
+		run(step);
+	}, 0);
 }
 
 function init() {

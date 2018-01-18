@@ -2,32 +2,20 @@
 var app = new Vue({
   el: '#app',
   data: {
-    state: 'begin'
-  }
-});
+    state: 'begin', // begin, select, run
+    paused: false,
+    worker: null
+  },
+  methods: {
+  	selectImage: function() {
+  		this.$refs["fileInput"].click();
+  	},
+  	setupImage: function() {
+  		this.state = 'select';
 
-	function qs(selector) {
-		return document.querySelector(selector);
-	}
+  		var input = this.$refs["fileInput"];
 
-	var imageInput = qs("#image-input");
-
-	qs("#image-crop").style.display = "none";
-	qs("#select-image-button").addEventListener("click", chooseImage);
-	qs("#select-another-image-button").addEventListener("click", chooseImage);
-	imageInput.addEventListener("change", setupImage);
-
-	var cropper;
-
-	function chooseImage() {
-		imageInput.click();
-	}
-
-	function setupImage(event) {
-		qs("#image-crop").style.display = "block";
-		qs("#image-selection").style.display = "none";
-
-		if (imageInput.files && imageInput.files[0]) {
+  		if (input.files && input.files[0]) {
 			var reader = new FileReader();
 
 			reader.onload = function(e) {
@@ -39,30 +27,30 @@ var app = new Vue({
 					}
 				);
 			}
-			reader.readAsDataURL(imageInput.files[0]);
+			reader.readAsDataURL(input.files[0]);
 		}
-	}
+  	},
+  	run: function() {
+  		this.state = 'run';
 
-	qs("#start-button").addEventListener("click", start);
+  		var kernel = this.getKernel();
 
-	function start() {
-		qs("#image-crop").style.display = "none";
-
-		var kernel = getKernel();
-
-		var worker = new Worker("js/knit.js");
+		this.worker = new Worker("js/knit.js");
 
 		let drawSettings;
 
-		worker.onerror = function(data) {
+		this.worker.onerror = function(data) {
 			console.log(data);
 		}
 
-		worker.onmessage = function(data) {
+		var self = this;
+
+		this.worker.onmessage = function(data) {
 			data = data.data;
 
 			if(data[0] == "result") {
-				draw(data[1], drawSettings);
+				self.draw(data[1], drawSettings);
+				document.title = data[2] + " generation";
 			} 
 
 			if(data[0] == "settings") {
@@ -78,12 +66,20 @@ var app = new Vue({
 			}
 		}
 
-		worker.postMessage(["init", kernel]);
+		this.worker.postMessage(["init", kernel]);
 
-		worker.postMessage(["step", 10]);
-	}
-
-	function getKernel() {
+		this.worker.postMessage(["run"]);
+  	},
+  	pause: function() {
+  		if(this.paused) {
+  			this.worker.postMessage(["run"]);
+  			this.paused = false;
+  		} else {
+  			this.worker.postMessage(["pause"]);
+  			this.paused = true;
+  		}
+  	},
+  	getKernel: function() {
 		var WIDTH = 100;
 		var HEIGHT = 100;
 
@@ -93,7 +89,7 @@ var app = new Vue({
 
 		var kernelCtx = kernel.getContext("2d");
 
-		var img = qs("#image-container img");
+		var img = document.querySelector("#image-container img");
 
 		var bounds = cropper.getInfo();
 		var scale = img.naturalWidth / bounds.cw;
@@ -104,20 +100,17 @@ var app = new Vue({
 
 		var kernel = new Float64Array(WIDTH * HEIGHT);
 		for(var i=0; i<WIDTH * HEIGHT; i++) {
-			kernel[i] = (data[i * 4] + data[i * 4 + 1] + data[i * 4 + 2]) / 3;
+			kernel[i] = -(data[i * 4] + data[i * 4 + 1] + data[i * 4 + 2]) / 3;
 		}
 
 		return kernel;
-	}
-
-		
-	function draw(genome, settings) {
-		let ctx = qs("canvas").getContext("2d");
+	},
+	draw: function(genome, settings) {
+		let ctx = this.$refs["canvas"].getContext("2d");
 		ctx.fillStyle = "#fff";
 		ctx.fillRect(0, 0, 300, 300);
 
 		let g = genome;
-		let info = qs("#info");
 		let points = settings.points;
 
 		ctx.strokeStyle = "rgba(0,0,0," + (300 * settings.threadDiameter / settings.ringDiameter) + ")";
@@ -130,3 +123,5 @@ var app = new Vue({
 		}
 		ctx.stroke();
 	}
+  }
+});
