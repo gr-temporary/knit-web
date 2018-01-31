@@ -3,8 +3,8 @@
 let nailCount = 200;
 let populationSize = 100;
 let eliteCount = 20;
-let genomeSize = 2000;
-let imageSize = 100;
+let genomeSize = 2400;
+let imageSize = 200;
 let iterationsCount = 20000;
 let mutationSpread = 0.01;
 let mutationCount = 0.001;
@@ -63,11 +63,12 @@ function run(step) {
 	if(needToStop) {
 		return;
 	}
-	step = step || (Math.random() * 20 + 1) | 0; 
-	for(let i=0; i<step; i++) {
+	let realStep = step || (Math.random() * 20 + 1) | 0; 
+	for(let i=0; i<realStep; i++) {
 		iterate();
 	}
-	postMessage(["result", getBest(), generation]);
+	let winner = getBest();
+	postMessage(["result", winner.dna, generation, winner.fitness]);
 	setTimeout(function() {
 		run(step);
 	}, 0);
@@ -102,7 +103,7 @@ function iterate() {
 }
 
 function getBest() {
-	return populations[lastPopulation].population[0].dna;
+	return populations[lastPopulation].population[0];
 }
 
 class Slab {

@@ -1,34 +1,60 @@
 
+const CANVAS_WIDTH = 500;
+const CANVAS_HEIGHT = 500;
+
 var app = new Vue({
   el: '#app',
   data: {
     state: 'begin', // begin, select, run
+    image: null,
+    cropper: null,
     paused: false,
-    worker: null
+    worker: null,
+    iteration: 0,
+    fitness: 0
   },
   methods: {
   	selectImage: function() {
   		this.$refs["fileInput"].click();
   	},
+  	usePrepared: function() {
+  		var number = Math.random() * 3 | 0;
+  		var image = new Image();
+  		image.onload = () => {
+  			this.image = image;
+  			this.run();
+  		};
+  		image.src = "sample/" + number + ".jpg";
+  	},
   	setupImage: function() {
   		this.state = 'select';
 
-  		var input = this.$refs["fileInput"];
+  		this.$nextTick(() => {
 
-  		if (input.files && input.files[0]) {
-			var reader = new FileReader();
+	  		var input = this.$refs["fileInput"];
+	  		var self = this;
 
-			reader.onload = function(e) {
-				cropper = new ICropper(
-					'image-container',    //Container id
-					{
-						ratio: 1,    //Set aspect ratio of the cropping area
-						image: e.target.result
-					}
-				);
+	  		var container = this.$refs["cropper"];
+	  		while(container.childElementCount) {
+	  			container.removeChild(container.firstChild);
+	  		}
+
+	  		if (input.files && input.files[0]) {
+				var reader = new FileReader();
+
+				reader.onload = function(e) {
+					self.cropper = new ICropper(
+						'image-container', //Container id
+						{
+							ratio: 1, //Set aspect ratio of the cropping area
+							image: e.target.result
+						}
+					);
+					self.image = document.querySelector("#image-container img");
+				}
+				reader.readAsDataURL(input.files[0]);
 			}
-			reader.readAsDataURL(input.files[0]);
-		}
+		});
   	},
   	run: function() {
   		this.state = 'run';
@@ -50,13 +76,15 @@ var app = new Vue({
 
 			if(data[0] == "result") {
 				self.draw(data[1], drawSettings);
+				self.iteration = data[2];
+				self.fitness = data[3];
 				document.title = data[2] + " generation";
 			} 
 
 			if(data[0] == "settings") {
 				drawSettings = data[1];
 				drawSettings.points = [];
-				let r = 300 / 2;
+				let r = CANVAS_WIDTH / 2;
 				for(let i=0; i<drawSettings.nailCount; i++) {
 					drawSettings.points.push({
 						x: r + r * Math.cos(Math.PI * 2 * i / drawSettings.nailCount),
@@ -79,41 +107,44 @@ var app = new Vue({
   			this.paused = true;
   		}
   	},
-  	getKernel: function() {
-		var WIDTH = 100;
-		var HEIGHT = 100;
+  	getKernel: function(image) {
+		let WIDTH = 150;
+		let HEIGHT = 150;
 
-		var kernel = document.createElement("canvas");
-		kernel.width = WIDTH;
-		kernel.height = HEIGHT;
+		let kernelCanvas = document.createElement("canvas");
+		kernelCanvas.width = WIDTH;
+		kernelCanvas.height = HEIGHT;
 
-		var kernelCtx = kernel.getContext("2d");
+		let kernelCtx = kernelCanvas.getContext("2d");
 
-		var img = document.querySelector("#image-container img");
+		let img = this.image;
 
-		var bounds = cropper.getInfo();
-		var scale = img.naturalWidth / bounds.cw;
+		let bounds = this.cropper ? this.cropper.getInfo() : { l: 0, t: 0, cw: img.naturalWidth, w: img.naturalWidth, h: img.naturalHeight };
+		let scale = img.naturalWidth / bounds.cw;
 
 		kernelCtx.drawImage(img, bounds.l * scale, bounds.t * scale, bounds.w * scale, bounds.h * scale, 0, 0, WIDTH, HEIGHT);
 
-		var data = kernelCtx.getImageData(0, 0, WIDTH, HEIGHT).data;
+		let data = kernelCtx.getImageData(0, 0, WIDTH, HEIGHT).data;
 
-		var kernel = new Float64Array(WIDTH * HEIGHT);
-		for(var i=0; i<WIDTH * HEIGHT; i++) {
+		let kernel = new Float64Array(WIDTH * HEIGHT);
+		for(let i=0; i<WIDTH * HEIGHT; i++) {
 			kernel[i] = -(data[i * 4] + data[i * 4 + 1] + data[i * 4 + 2]) / 3;
 		}
 
 		return kernel;
 	},
 	draw: function(genome, settings) {
+		this.$refs.canvas.width = CANVAS_WIDTH;
+		this.$refs.canvas.height = CANVAS_HEIGHT;
+
 		let ctx = this.$refs["canvas"].getContext("2d");
 		ctx.fillStyle = "#fff";
-		ctx.fillRect(0, 0, 300, 300);
+		ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
 		let g = genome;
 		let points = settings.points;
 
-		ctx.strokeStyle = "rgba(0,0,0," + (300 * settings.threadDiameter / settings.ringDiameter) + ")";
+		ctx.strokeStyle = "rgba(0,0,0," + (CANVAS_WIDTH * settings.threadDiameter / settings.ringDiameter) + ")";
 		ctx.beginPath();
 		let p = points[g[0]];
 		ctx.moveTo(p.x, p.y);
