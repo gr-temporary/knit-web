@@ -3,8 +3,8 @@
 let nailCount = 200;
 let populationSize = 100;
 let eliteCount = 20;
-let genomeSize = 2400;
-let imageSize = 200;
+let genomeSize = 2500;
+let imageSize = 150;
 let iterationsCount = 20000;
 let mutationSpread = 0.01;
 let mutationCount = 0.001;
@@ -26,35 +26,52 @@ let lastPopulation = 0;
 
 let needToStop = false;
 
+let timer = {
+	data: [],
+	max: 20,
+	current: 0,
+	start: function() {
+		this.time = Date.now();
+	},
+	stop: function(iterations) {
+		iterations = iterations || 1;
+		let result = (Date.now() - this.time) / iterations;
+		this.data.push(result);
+		if(this.data.length > this.max) {
+			this.data.shift();
+		}
+	},
+	average: function() {
+		return this.data.reduce((a,b) => a + b, 0) / this.data.length
+	}
+};
+
 console.log("Heyo");
 
 onmessage = function(data) {
 	data = data.data;
-	if(data[0] == "init") {
+	if(data.message == "init") {
+		nailCount = data.settings.nailCount;
+    	genomeSize = data.settings.genomeSize;
+    	imageSize = data.settings.imageSize;
+    	ringDiameter = data.settings.ringDiameter;
+    	threadDiameter = data.settings.threadDiameter;
+
+    	threadOpacity = imageSize * threadDiameter / ringDiameter;
+		nailPoints = new Int32Array(nailCount * 2);
+		bounds = new Int32Array(imageSize * 2);
+
 		init();
-		kernel.copyFrom(data[1]);
+		kernel.copyFrom(data.kernel);
 		kernel.normalize();
-
-		postMessage(["settings", {
-			nailCount: nailCount,
-			ringDiameter: ringDiameter,
-			threadDiameter: threadDiameter
-		}]);
 	}
 
-	if(data[0] == "step") {
-		for(let i=0; i<data[1]; i++) {
-			iterate();
-		}
-		postMessage(["result", getBest(), generation]);
-	}
-
-	if(data[0] == "run") {
+	if(data.message == "run") {
 		needToStop = false;
-		run(data[1]);
+		run(data.step);
 	}
 
-	if(data[0] == "pause") {
+	if(data.message == "pause") {
 		needToStop = true;
 	}
 }
@@ -63,12 +80,20 @@ function run(step) {
 	if(needToStop) {
 		return;
 	}
-	let realStep = step || (Math.random() * 20 + 1) | 0; 
+	let realStep = step || (Math.random() * 5 + 8) | 0; 
+	timer.start();
 	for(let i=0; i<realStep; i++) {
 		iterate();
 	}
+	timer.stop(realStep);
 	let winner = getBest();
-	postMessage(["result", winner.dna, generation, winner.fitness]);
+	postMessage({
+		message: "result",
+		dna: winner.dna,
+		generation: generation,
+		fitness: winner.fitness,
+		time: timer.average()
+	});
 	setTimeout(function() {
 		run(step);
 	}, 0);
@@ -84,6 +109,9 @@ function init() {
 
 	populations[0] = new Population();
 	populations[1] = new Population();
+
+	generation = 0;
+	lastPopulation = 0;
 }
 
 function iterate() {

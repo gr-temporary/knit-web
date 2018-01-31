@@ -24,11 +24,20 @@ section {
 	width: 100%;
 }
 
+.p {
+	margin: 0.5em 0;
+}
+
 .action-link {
 	text-decoration: underline;
 	cursor: pointer;
 	display: inline-block;
 	margin: 5px 0;
+}
+
+.scheme {
+	font-family: monospace;
+	text-align: left;
 }
 
 .big-button {
@@ -52,8 +61,20 @@ section {
     border-color: #007bff;
 }
 
+.big-button.red {
+	color: #fff;
+    background-color: #6c757d;
+    border-color: #6c757d;
+}
+
 #image-container img {
 	max-width: 100%;
+}
+
+p {
+	max-width: 500px;
+	margin: 0.5em auto;
+	text-align: left;
 }
 
 input[type="file"] {
@@ -61,4 +82,36 @@ input[type="file"] {
 	width: 1px;
 	height: 1px;
 	overflow: hidden;
+}
+
+.option {
+	margin: 1.5em 0;
+	text-align: left;
+}
+
+.option > label {
+	display: inline-block;
+	margin-left: 20%;
+	padding-left: 1em;
+}
+
+.option-row {
+	display: flex;
+}
+
+.option-less, .option-more {
+	flex: 0 0 20%;
+}
+
+.option-range {
+	flex: 1;
+	margin: 0 1em;
+}
+
+.option-less {
+	text-align: right;
+}
+
+.option-more {
+	text-align: left;
 }

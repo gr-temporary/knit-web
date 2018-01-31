@@ -16,19 +16,78 @@
 			<span class="action-link" @click="usePrepared">или используйте случайное</span>
 		</section>
 		<section id="image-crop" v-if="state == 'select'">
+			<div class="p">
+				Выберите интересный кусок изображения (лицо, если оно есть):
+			</div>
 			<div id="image-container" ref="cropper"></div>
-			<div>
+			<div class="p">
 				<span id="select-another-image-button" class="action-link" @click="selectImage">Выбрать другое?</span>
 			</div>
-			<button id="start-button" class="big-button" @click="run">Поехали!</button>
+			<div class="p">
+				<span class="action-link" @click="toggleParameters">Поиграть с параметрами?</span>
+				<div v-if="showParameters" class="toolbox">
+					<range-option v-bind:max="300" v-bind:min="100" v-model="drawSettings.nailCount">
+						<span slot="title">Количество гвоздей</span>
+						<span slot="less">Меньше</span>
+						<span slot="more">Больше</span>
+					</range-option>
+					<range-option v-bind:max="3000" v-bind:min="1000" v-model="drawSettings.genomeSize">
+						<span slot="title">Количество витков</span>
+						<span slot="less">Быстрее</span>
+						<span slot="more">Чётче</span>
+					</range-option>
+					<range-option v-bind:max="250" v-bind:min="50" v-model="drawSettings.imageSize">
+						<span slot="title">Размер шаблона</span>
+						<span slot="less">Быстрее</span>
+						<span slot="more">Чётче</span>
+					</range-option>
+					<range-option v-bind:max="1000" v-bind:min="100" v-model="drawSettings.ringDiameter">
+						<span slot="title">Диаметр кольца (мм)</span>
+						<span slot="less">Меньше</span>
+						<span slot="more">Больше</span>
+					</range-option>
+					<range-option v-bind:max="50" v-bind:min="1" v-bind:multiplier="100" v-model="drawSettings.threadDiameter">
+						<span slot="title">Диаметр нити (мм)</span>
+						<span slot="less">Тоньше</span>
+						<span slot="more">Толще</span>
+					</range-option>
+				</div>
+			</div>
+			<div class="p">
+				<button id="start-button" class="big-button" @click="run">Поехали!</button>
+			</div>
 		</section>
 		<section class="process" v-if="state == 'run'">
-			<canvas width="300" height="300" ref="canvas"></canvas>
-			<pre ref="info">{{iteration}}, {{fitness}}</pre>
-			<button id="play-pause" class="big-button" @click="pause"><template v-if="!paused">Пауза</template><template v-if="paused">Продолжить</template></button>
-			<div v-if="paused"></div>
+			<canvas ref="canvas"></canvas>
+			<div>Поколение: <strong>{{iteration}}</strong>, степень схожести: <strong>{{prettyFitness}}%</strong></div>
+			<div class="p">
+				<button id="play-pause" class="big-button" @click="pause"><template v-if="!paused">Пауза</template><template v-if="paused">Продолжить</template></button>
+			</div>
+			<div class="p" v-if="paused">
+				<button class="big-button red" @click="reset">Какая-то фигня получилась, давай заново</button>
+			</div>
+
+			<p v-if="iteration < 1000 && !paused">Обычно что-то похожее на оригинал появляется уже на тысячном поколении (нужно подождать ещё {{to1k}}), а совсем хорошо становится к 10&thinsp;000 (ещё {{to10k}}).</p>
+			<p v-if="iteration > 1000 && iteration < 10000 && !paused">До 10&thinsp;000 осталось примерно {{to10k}}.</p>	
+			<p v-if="!paused">Нажмите на паузу, чтобы посмотреть схему для текущего изображения или начать с начала.</p>
+			<div class="p" v-if="paused">
+				<p>Для текущего изображения понадобится <strong>{{threadLength}}</strong> нити.</p>
+				<p>Последовательность гвоздей для текущего изображения (гвозди нумеруются по часовой стрелке):</p>
+				<div class="scheme">{{currentScheme}}</div>
+			</div>
 		</section>
 	</div>
+
+	<script type="text/x-template" id="range-option">
+		<div class="option">
+			<label><slot name="title"></slot>: {{displayValue}}</label>
+			<div class="option-row">
+				<div class="option-less"><slot name="less"></slot></div>
+				<input class="option-range" type="range" v-bind:min="min" v-bind:max="max" v-bind:value="realValue" v-on:input="update($event.target.value)">
+				<div class="option-more"><slot name="more"></slot></div>
+			</div>
+		</div>
+	</script>
 	
 	<script src="https://unpkg.com/vue"></script>
 	<script src="js/icropper.js"></script>
