@@ -212,8 +212,8 @@ var app = new Vue({
   		}
   	},
   	getKernel: function(image) {
-		let WIDTH = 150;
-		let HEIGHT = 150;
+		let WIDTH = this.drawSettings.imageSize;
+		let HEIGHT = this.drawSettings.imageSize;
 
 		let kernelCanvas = document.createElement("canvas");
 		kernelCanvas.width = WIDTH;

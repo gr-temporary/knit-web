@@ -25,33 +25,6 @@
 			</div>
 			<div class="p">
 				<span class="action-link" @click="toggleParameters">Поиграть с параметрами?</span>
-				<div v-if="showParameters" class="toolbox">
-					<range-option v-bind:max="300" v-bind:min="100" v-model="drawSettings.nailCount">
-						<span slot="title">Количество гвоздей</span>
-						<span slot="less">Меньше</span>
-						<span slot="more">Больше</span>
-					</range-option>
-					<range-option v-bind:max="3000" v-bind:min="1000" v-model="drawSettings.genomeSize">
-						<span slot="title">Количество витков</span>
-						<span slot="less">Быстрее</span>
-						<span slot="more">Чётче</span>
-					</range-option>
-					<range-option v-bind:max="250" v-bind:min="50" v-model="drawSettings.imageSize">
-						<span slot="title">Размер шаблона</span>
-						<span slot="less">Быстрее</span>
-						<span slot="more">Чётче</span>
-					</range-option>
-					<range-option v-bind:max="1000" v-bind:min="100" v-model="drawSettings.ringDiameter">
-						<span slot="title">Диаметр кольца (мм)</span>
-						<span slot="less">Меньше</span>
-						<span slot="more">Больше</span>
-					</range-option>
-					<range-option v-bind:max="50" v-bind:min="1" v-bind:multiplier="100" v-model="drawSettings.threadDiameter">
-						<span slot="title">Диаметр нити (мм)</span>
-						<span slot="less">Тоньше</span>
-						<span slot="more">Толще</span>
-					</range-option>
-				</div>
 			</div>
 			<div class="p">
 				<button id="start-button" class="big-button" @click="run">Поехали!</button>
@@ -76,6 +49,37 @@
 				<div class="scheme">{{currentScheme}}</div>
 			</div>
 		</section>
+		<div v-if="showParameters" class="toolbox-lightbox">
+			<div class="toolbox">
+				<span class="warning" v-if="drawSettings.ringDiameter * 3.141592 / drawSettings.nailCount < 2">Расстояние между гвоздями меньше 2 мм!</span>
+				<range-option v-bind:max="300" v-bind:min="100" v-model="drawSettings.nailCount">
+					<span slot="title">Количество гвоздей</span>
+					<span slot="less">Меньше</span>
+					<span slot="more">Больше</span>
+				</range-option>
+				<range-option v-bind:max="3000" v-bind:min="1000" v-model="drawSettings.genomeSize">
+					<span slot="title">Количество витков</span>
+					<span slot="less">Быстрее</span>
+					<span slot="more">Чётче</span>
+				</range-option>
+				<range-option v-bind:max="250" v-bind:min="50" v-model="drawSettings.imageSize">
+					<span slot="title">Размер шаблона</span>
+					<span slot="less">Быстрее</span>
+					<span slot="more">Чётче</span>
+				</range-option>
+				<range-option v-bind:max="1000" v-bind:min="100" v-model="drawSettings.ringDiameter">
+					<span slot="title">Диаметр кольца (мм)</span>
+					<span slot="less">Меньше</span>
+					<span slot="more">Больше</span>
+				</range-option>
+				<range-option v-bind:max="50" v-bind:min="1" v-bind:multiplier="100" v-model="drawSettings.threadDiameter">
+					<span slot="title">Диаметр нити (мм)</span>
+					<span slot="less">Тоньше</span>
+					<span slot="more">Толще</span>
+				</range-option>
+				<button class="big-button" @click="toggleParameters">Отлично!</button>
+			</div>
+		</div>
 	</div>
 
 	<script type="text/x-template" id="range-option">
@@ -89,7 +93,7 @@
 		</div>
 	</script>
 	
-	<script src="https://unpkg.com/vue"></script>
+	<script src="js/vue.js"></script>
 	<script src="js/icropper.js"></script>
 	<script src="js/app.js"></script>
 </body>
