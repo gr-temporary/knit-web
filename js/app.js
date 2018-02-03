@@ -57,13 +57,13 @@ var app = new Vue({
   		return (this.fitness * this.fitness * 100).toFixed(2);
   	},
   	to1k: function() {
-  		if(this.iteration == ) {
+  		if(this.iteration == 0) {
   			return "несколько минут";
   		}
   		return this.formatNumber((1000 - this.iteration) * this.avgTime / (1000 * 60), "минут", "минуту", "минуты");
   	},
   	to10k: function() {
-  		if(this.iteration == ) {
+  		if(this.iteration == 0) {
   			return "неизвестно сколько";
   		}
   		return this.formatNumber((10000 - this.iteration) * this.avgTime / (1000 * 60), "минут", "минуту", "минуты");
