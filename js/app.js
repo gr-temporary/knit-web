@@ -238,7 +238,8 @@ var app = new Vue({
 
 		let kernel = new Float64Array(WIDTH * HEIGHT);
 		for(let i=0; i<WIDTH * HEIGHT; i++) {
-			kernel[i] = -(data[i * 4] + data[i * 4 + 1] + data[i * 4 + 2]) / 3;
+			kernel[i] = -Math.sqrt(Math.pow(data[i * 4], 2) + Math.pow(data[i * 4 + 1], 2) + Math.pow(data[i * 4 + 2], 2)) / 3;
+			//kernel[i] = -(data[i * 4] + data[i * 4 + 1] + data[i * 4 + 2]) / 3;
 		}
 
 		return kernel;
